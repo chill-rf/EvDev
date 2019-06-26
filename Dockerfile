@@ -1,7 +1,7 @@
 # Just use the code-server docker binary
-FROM codercom/code-server as coder-binary
+FROM my-code-server as coder-binary
 
-FROM ubuntu:18.10 as vscode-env
+FROM ubuntu:18.04 as vscode-env
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install the actual VSCode to download configs and extensions
@@ -27,7 +27,7 @@ RUN code -v --user-data-dir /root/.config/Code && \
 	sh install-vscode-extensions.sh ../extensions.list
 
 # The production image for code-server
-FROM ubuntu:18.10
+FROM ubuntu:18.04
 MAINTAINER Everette Rong (https://rongyi.blog)
 WORKDIR /project
 COPY --from=coder-binary /usr/local/bin/code-server /usr/local/bin/code-server
@@ -45,12 +45,21 @@ RUN apt-get update && \
 # configured in /etc/default/locale so we need to set it manually.
 ENV LANG=en_US.UTF-8
 
+RUN apt-get install -y sudo tzdata && \
+  ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+
 # Install langauge toolchains
 RUN sh /root/scripts/install-tools-nodejs.sh
 RUN sh /root/scripts/install-tools-dev.sh
 RUN sh /root/scripts/install-tools-golang.sh
 RUN sh /root/scripts/install-tools-cpp.sh
 RUN sh /root/scripts/install-tools-python.sh
+RUN sh /root/scripts/install-tools-java.sh
+
+RUN mkdir ~/.npm-global && \
+  npm config set prefix '~/.npm-global'
+
+RUN echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.profile
 
 EXPOSE 8443
 CMD code-server $PWD
